@@ -528,21 +528,19 @@ export const getIpMatchListStatus = (ip, list) => {
         return IP_MATCH_LIST_STATUS.NOT_FOUND;
     }
 
-    return list.split('\n')
-        .reduce((ipMatchList, listItem) => {
-            if (ipMatchList !== IP_MATCH_LIST_STATUS.NOT_FOUND) {
-                return ipMatchList;
-            }
+    const listArr = list.split('\n');
 
-            if (listItem === ip) {
-                return IP_MATCH_LIST_STATUS.EXACT;
-            }
+    for (let i = 0; i < listArr.length; i += 1) {
+        const listItem = listArr[i];
 
-            if (listItem.includes('/') && isIpMatchCidr(ip, listItem)) {
-                return IP_MATCH_LIST_STATUS.CIDR;
-            }
+        if (listItem === ip) {
+            return IP_MATCH_LIST_STATUS.EXACT;
+        }
 
-            return IP_MATCH_LIST_STATUS.NOT_FOUND;
-        },
-        IP_MATCH_LIST_STATUS.NOT_FOUND);
+        if (listItem.includes('/') && isIpMatchCidr(ip, listItem)) {
+            return IP_MATCH_LIST_STATUS.CIDR;
+        }
+    }
+
+    return IP_MATCH_LIST_STATUS.NOT_FOUND;
 };

@@ -497,20 +497,14 @@ export const normalizeMultiline = (multiline) => `${normalizeTextarea(multiline)
 
 
 /**
- * @param ip {string}
- * @param cidr {string}
+ * @param parsedIp {object} ipaddr.js IPv4 or IPv6 object
+ * @param cidr {array} ipaddr.js CIDR array
  * @returns {boolean}
  */
-export const isIpMatchCidr = (ip, cidr) => {
+export const isIpMatchCidr = (parsedIp, parsedCidr) => {
     try {
-        const [cidrIp] = cidr.split('/');
-        const cidrIpVersion = ipaddr.parse(cidrIp)
-            .kind();
-
-        const parsedIp = ipaddr.parse(ip);
+        const cidrIpVersion = parsedCidr[0].kind();
         const ipVersion = parsedIp.kind();
-
-        const parsedCidr = ipaddr.parseCIDR(cidr);
 
         return ipVersion === cidrIpVersion && parsedIp.match(parsedCidr);
     } catch (e) {
@@ -528,19 +522,29 @@ export const getIpMatchListStatus = (ip, list) => {
         return IP_MATCH_LIST_STATUS.NOT_FOUND;
     }
 
-    const listArr = list.split('\n');
+    const listArr = list.trim()
+        .split('\n');
 
-    for (let i = 0; i < listArr.length; i += 1) {
-        const listItem = listArr[i];
+    try {
+        for (let i = 0; i < listArr.length; i += 1) {
+            const listItem = listArr[i];
 
-        if (listItem === ip) {
-            return IP_MATCH_LIST_STATUS.EXACT;
+            const parsedIp = ipaddr.parse(ip);
+            const isItemAnIp = ipaddr.isValid(listItem);
+            const parsedItem = isItemAnIp ? ipaddr.parse(listItem) : ipaddr.parseCIDR(listItem);
+
+            if (isItemAnIp && parsedIp.toString() === parsedItem.toString()) {
+                return IP_MATCH_LIST_STATUS.EXACT;
+            }
+
+            if (!isItemAnIp && isIpMatchCidr(parsedIp, parsedItem)) {
+                return IP_MATCH_LIST_STATUS.CIDR;
+            }
         }
-
-        if (listItem.includes('/') && isIpMatchCidr(ip, listItem)) {
-            return IP_MATCH_LIST_STATUS.CIDR;
-        }
+        return IP_MATCH_LIST_STATUS.NOT_FOUND;
+    } catch (e) {
+        return IP_MATCH_LIST_STATUS.NOT_FOUND;
     }
-
-    return IP_MATCH_LIST_STATUS.NOT_FOUND;
 };
+
+window.ipaddr = ipaddr;
